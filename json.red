@@ -93,6 +93,8 @@ json-ctx: object [
 	hex-char:  union digit charset "ABCDEFabcdef"
 	ctrl-char: charset [#"^@" - #"^_"]		; Control chars 0-31
 
+	not-low-ascii-char: charset [not #"^(00)" - #"^(127)"]
+
 	; everything but \ and "
 	; Defining it literally this way, rather than a [NOT charset] rule, takes ~70K
 	; Need to see if it's faster one way or the other. 
@@ -231,9 +233,10 @@ json-ctx: object [
 
 	encode-char: func [
 		"Convert a single char to \uxxxx format"
-		char [char!]
+		char [char! string!]
 	][
 		;rejoin ["\u" to-hex/size to integer! char 4]
+		if string? char [char: first char]
 		append copy "\u" to-hex/size to integer! char 4
 	]
 
@@ -271,10 +274,11 @@ json-ctx: object [
 	;TBD: Encode unicode chars
 	encode-red-string: func [string "(modified)"][
 		encode-control-chars esc-red-to-json string
+		;TBD translit string not-low-ascii-char :encode-char
 	]
 
 	red-to-json-name: func [val][
-		append add-quotes form val ":"
+		append add-quotes encode-red-string form val ":"
 	]
 
 	; MOLD adds quotes to string!, but not all any-string! values.
@@ -302,7 +306,6 @@ json-ctx: object [
 					red-to-json-value get val
 				][
 					; No-value error, or non-JSON types become quoted strings.
-				print ['xxx mold val]
 					add-quotes encode-red-string form val
 				]
 			]
@@ -353,11 +356,10 @@ json-ctx: object [
 		result
 	]
 
-
-	decode-unicode-char: func [ch "4 hex digits" /local c][
-		; TBD: Figure out how to do this without LOAD/COPY/REJOIN.
-		;load rejoin [{#"^^(} val {)"}]
-		#"^(00)" + load append uppercase copy ch "h"
+	decode-unicode-char: func [ch [string!] "4 hex digits"][
+		buf: {#"^^(0000)"}								; Don't COPY buffer, reuse it
+		if not parse ch [4 hex-char] [return none]		; Validate input data
+		attempt [load head change at buf 5 ch]
 	]
 
 	replace-unicode-escapes: func [s [string!] "(modified)" /local c][
