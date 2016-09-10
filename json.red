@@ -33,16 +33,15 @@ Red [
 json-ctx: object [
 
 	translit: func [
-		"Tansliterate values in a string"
+		"Tansliterate sub-strings in a string"
 		string [string!] "Input (modified)"
 		rule   [block! bitset!] "What to change"
-		xlat   [block! function!] "Translation table or function"
+		xlat   [block! function!] "Translation table or function. MUST map a string! to a string!."
 		/local val
 	][
 		parse string [
 			some [
-				;change copy val rule (val either block? :xlat [xlat/:val][xlat val])
-				change set val rule (val either block? :xlat [xlat/:val][xlat val])
+				change copy val rule (val either block? :xlat [xlat/:val][xlat val])
 				| skip
 			]
 		]
@@ -137,7 +136,7 @@ json-ctx: object [
 		; but we want the target to be the block we just added, so
 		; we reset '_res to that after 'emit is done.
 		#"{" (push emit copy []  _res: last _res)
-		opt property-list
+		ws* opt property-list
 		; This is a little confusing. We're at the tail of our current
 		; output target, which is on our stack. We pop that, then need
 		; to back up on, which puts us AT the block of values we 
@@ -166,7 +165,7 @@ json-ctx: object [
 		; but we want the target to be the block we just added, so
 		; we reset '_res to that after 'emit is done.
 		#"[" (push emit copy []  _res: last _res)
-		opt array-list
+		ws* opt array-list
 		#"]" (_res: pop)
 	]
 
@@ -246,8 +245,12 @@ json-ctx: object [
 ;!! call used every time we encode a char.
 	make-ctrl-char-esc-table: function [][
 		collect [
-			keep reduce [ch: make char! 0  encode-char ch]
-			repeat i 31 [keep reduce [ch: make char! i  encode-char ch]]
+			;!! FORM is used here, when building the table, because TRANSLIT
+			;	requires values to be strings. Yes, that's leaking it's
+			;	abstraction a bit, which has to do with it using COPY vs SET
+			;	in its internal PARSE rule.
+			keep reduce [form ch: make char! 0  encode-char ch]
+			repeat i 31 [keep reduce [form ch: make char! i  encode-char ch]]
 		]
 	]
 	ctrl-char-esc-table: make-ctrl-char-esc-table

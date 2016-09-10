@@ -9,8 +9,8 @@ fail?: func [file] [error? set/any 'err try [load-json read file]]
 
 while [file: request-file %*.json][
 	if file [
-	    res: load-json read file
-	    print mold res
+		res: load-json read file
+		print mold res
 	]
 ]
 
