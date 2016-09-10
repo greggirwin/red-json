@@ -83,16 +83,16 @@ json-ctx: object [
 	;-----------------------------------------------------------
 
 	;# Basic rules
-	ws:  charset " ^-^/^M"					; Whitespace
+	ws:  charset " ^-^/^M"						; Whitespace
 	ws*: [any ws]
 	ws+: [some ws]
-	sep: [ws* #"," ws*]						; JSON value separator
-	chars: charset [not {\"}]				; Unescaped chars (NOT creates a virtual bitset)
+	sep: [ws* #"," ws*]							; JSON value separator
 	digit: charset "0123456789"
 	non-zero-digit: charset "123456789"
 	hex-char:  charset "0123456789ABCDEFabcdef"
-	ctrl-char: charset [#"^@" - #"^_"]		; Control chars 0-31
-
+	ctrl-char: charset [#"^@" - #"^_"]			; Control chars 0-31
+	chars: charset [not {\"} #"^@" - #"^_"]		; Unescaped chars (NOT creates a virtual bitset)
+		
 	; TBD: Unicode
 	not-low-ascii-char: charset [not #"^(00)" - #"^(127)"]
 
