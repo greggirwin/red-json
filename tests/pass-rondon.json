@@ -1,0 +1,56 @@
+{
+    "r": {
+        "t":"1",
+        "f":"Simulado",
+        "dt":"24/09/2008",
+        "ht":"17:06",
+        "dg":"03/10/2008",
+        "hg":"14:51",
+        "tf":"false",
+        "v":"1"
+    },
+    "c": {
+        "1": {
+            "cc":"PTB / PTN / PSC / PRTB / PHS / PTC / PSB",
+            "n":"19",
+            "nm":"VIDAL",
+            "nv":"MARCELO YASSER SÉRGIO",
+            "e":"false",
+            "v":"412615"
+        },
+        "2": {
+            "cc":"PT",
+            "n":"13",
+            "nm":"RAQUEL",
+            "nv":"ELIAS SÉRGIO STEFANO",
+            "e":"false",
+            "v":"152981"
+        },
+        "3": {
+            "cc":"PMDB",
+            "n":"15",
+            "nm":"IBRAIM",
+            "nv":"HIGINO QUINCAS EDMUNDO",
+            "e":"false",
+            "v":"115074"
+        },
+        "4": {
+            "cc":"PRB / PSL / DEM / PSDC / PSDB / PC do B",
+            "n":"65",
+            "nm":"XISTO",
+            "nv":"CLÉLIA GUILHERMINA AURORA",
+            "e":"false",
+            "v":"8822"
+        }
+    },
+    "t": {
+        "s":"2249",
+        "st":"2249",
+        "e":"843540",
+        "ea":"843540",
+        "c":"760195",
+        "vb":"46778",
+        "vn":"23925",
+        "vv":"689492"
+    }
+}
