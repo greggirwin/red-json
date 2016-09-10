@@ -23,7 +23,7 @@ Red [
 		- Further research: JSON libs by Chris Ross-Gill, Kaj de Vos, and @WiseGenius.
 		
 		? Do we want to have a single context or separate encode/decode contexts?
-		? Do we want to use a stack with parse, or recursive load-json (decode) calls?
+		? Do we want to use a stack with parse, or recursive load-json/decode calls?
 
 		- Unicode support is in the works
 		- Pretty formatting from %json.r removed
@@ -82,7 +82,7 @@ json-ctx: object [
 	;-- JSON decoder
 	;-----------------------------------------------------------
 
-	; Basic rules
+	;# Basic rules
 	ws:  charset " ^-^/^M"					; Whitespace
 	ws*: [any ws]
 	ws+: [some ws]
@@ -90,9 +90,10 @@ json-ctx: object [
 	chars: charset [not {\"}]				; Unescaped chars (NOT creates a virtual bitset)
 	digit: charset "0123456789"
 	non-zero-digit: charset "123456789"
-	hex-char:  union digit charset "ABCDEFabcdef"
+	hex-char:  charset "0123456789ABCDEFabcdef"
 	ctrl-char: charset [#"^@" - #"^_"]		; Control chars 0-31
 
+	; TBD: Unicode
 	not-low-ascii-char: charset [not #"^(00)" - #"^(127)"]
 
 	; everything but \ and "
@@ -141,7 +142,7 @@ json-ctx: object [
 		ws* opt property-list
 		; This is a little confusing. We're at the tail of our current
 		; output target, which is on our stack. We pop that, then need
-		; to back up on, which puts us AT the block of values we 
+		; to back up one, which puts us AT the block of values we 
 		; collected for this object in our output target. i.e., the 
 		; values are in a sub-block at the first position now. We use
 		; that (FIRST) to make a map! and replace the block of values
@@ -215,7 +216,7 @@ json-ctx: object [
 		_out: _res: copy []		; These point to the same position to start with
 		mark: input
 		either parse input json-value [pick _out 1][
-			throw make error! probe form reduce [
+			throw make error! form reduce [
 				"Invalid json string. Near:"
 				either tail? mark ["<end of input>"] [mold copy/part mark 40]
 			]
@@ -375,6 +376,22 @@ json-ctx: object [
 	;str: {\/\\\"\uCAFE\uBABE\uAB98\uFCDE\ubcda\uef4A\b\f\n\r\t`1~!@#$%&*()_+-=[]{}|;:',./<>?}
 	;mod-str: esc-json-to-red json-ctx/replace-unicode-escapes copy str
 	;mod-str: json-ctx/replace-unicode-escapes esc-json-to-red copy str
+	
+;	    single-line-cleanup: function [string][
+;	    	table: ["{ " "{"  "[ " "["  " }" "}"  " ]" "]"]		; From/To Old/New Dirty/Clean values
+;	    	dirty:  ["{ " | "[ " | " }" | " ]"]
+;	    	translit string dirty table
+;	    ]
+;	    ;print mold single-line-cleanup "{ a [ b { c } d ] f }"
+;	    
+;		single-line-reformat: function [
+;			"Reformats a block/object to a single line if it's short enough."
+;			val
+;		][
+;			either 80 >= length? join dent s: trim/lines copy val [
+;				single-line-cleanup s
+;			][val]
+;		]
 	
 ]
 
