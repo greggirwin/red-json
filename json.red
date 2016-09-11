@@ -156,17 +156,23 @@ json-ctx: object [
 		)
 	]
 
-	decode-unicode-char: func [ch [string!] "4 hex digits"][
+	decode-unicode-char: func [
+		"Convert \uxxxx format (NOT simple JSON backslash escapes) to a Unicode char"
+		ch [string!] "4 hex digits"
+	][
 		buf: {#"^^(0000)"}								; Don't COPY buffer, reuse it
 		if not parse ch [4 hex-char] [return none]		; Validate input data
-		attempt [load head change at buf 5 ch]			; Replace 0000 section with arg chars
+		attempt [load head change at buf 5 ch]			; Replace 0000 section in buf
 	]
 
-	replace-unicode-escapes: func [s [string!] "(modified)" /local c][
+	replace-unicode-escapes: func [
+		s [string!] "(modified)"
+		/local c
+	][
 		parse s [
 			any [
-				some chars
-				| json-escaped
+				some chars								; Pass over unescaped chars
+				| json-escaped							; Pass over simple backslash escapes
 				| change ["\u" copy c 4 hex-char] (decode-unicode-char c)
 			]
 		]
@@ -224,15 +230,14 @@ json-ctx: object [
 	json-value: [
 		ws*
 		[
-			; http://www.ietf.org/rfc/rfc7159.txt says literals must be lowercase
-			"true"    (emit true)
+			"true"    (emit true)							; Literals must be lowercase
 			| "false" (emit false)
 			| "null"  (emit none)
 			| json-object
 			| json-array
 			| string-literal (emit _str)
-			| copy _str numeric-literal (emit load _str)	; number
-			mark:   										; set mark for failure location
+			| copy _str numeric-literal (emit load _str)	; Number
+			mark:   										; Set mark for failure location
 		]
 		ws*
 	]
