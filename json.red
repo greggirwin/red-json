@@ -65,7 +65,9 @@ json-ctx: object [
 
 	;-----------------------------------------------------------
 	;-- JSON backslash escaping
-	
+
+	;TBD: I think this can be improved. --Gregg
+		
 	json-to-red-escape-table: [
 	;   JSON Red
 		{\"} "^""
@@ -79,21 +81,21 @@ json-ctx: object [
 	]
 	red-to-json-escape-table: reverse copy json-to-red-escape-table
 	
-	json-esc-ch: charset {"t\/nrbf}             ; Backslash escaped json chars
+	json-esc-ch: charset {"t\/nrbf}             ; Backslash escaped JSON chars
 	json-escaped: [#"\" json-esc-ch]			; Backslash escape rule
-	red-esc-ch: charset {^"^-\/^/^M^H^L}        ; Red chars requiring json backslash escapes
+	red-esc-ch: charset {^"^-\/^/^M^H^L}        ; Red chars requiring JSON backslash escapes
 
-	esc-json-to-red: func [string [string!] "(modified)"][
+	decode-backslash-escapes: func [string [string!] "(modified)"][
 		translit string json-escaped json-to-red-escape-table
 	]
 
-	esc-red-to-json: func [string [string!] "(modified)"][
+	encode-backslash-escapes: func [string [string!] "(modified)"][
 		translit string red-esc-ch red-to-json-escape-table
 	]
 
 	;ss: copy string: {abc\"\\\/\b\f\n\r\txyz}
-	;esc-json-to-red string
-	;esc-red-to-json string
+	;decode-backslash-escapes string
+	;encode-backslash-escapes string
 	;ss = string
 
 	;-----------------------------------------------------------
@@ -145,11 +147,11 @@ json-ctx: object [
 			any [some chars | #"\" [#"u" 4 hex-char | json-esc-ch]]
 		] #"^"" (
 			if not empty? _str: any [_str copy ""] [
-				;!! If we reverse the esc-json-to-red and replace-unicode-escapes
+				;!! If we reverse the decode-backslash-escapes and replace-unicode-escapes
 				;!! calls, the string gets munged (extra U+ chars). Need to investigate.
-				;esc-json-to-red s
-				;replace-unicode-escapes s
-				replace-unicode-escapes esc-json-to-red _str
+				decode-backslash-escapes _str			; _str is modified
+				replace-unicode-escapes _str			; _str is modified
+				;replace-unicode-escapes decode-backslash-escapes _str
 			]
 		)
 	]
@@ -171,8 +173,8 @@ json-ctx: object [
 		s
 	]
 	;str: {\/\\\"\uCAFE\uBABE\uAB98\uFCDE\ubcda\uef4A\b\f\n\r\t`1~!@#$%&*()_+-=[]{}|;:',./<>?}
-	;mod-str: esc-json-to-red json-ctx/replace-unicode-escapes copy str
-	;mod-str: json-ctx/replace-unicode-escapes esc-json-to-red copy str
+	;mod-str: decode-backslash-escapes json-ctx/replace-unicode-escapes copy str
+	;mod-str: json-ctx/replace-unicode-escapes decode-backslash-escapes copy str
 	
 	;-----------------------------------------------------------
 	;-- Object		
@@ -329,7 +331,7 @@ json-ctx: object [
 
 	;TBD: Encode unicode chars?
 	encode-red-string: func [string "(modified)"][
-		encode-control-chars esc-red-to-json string
+		encode-control-chars encode-backslash-escapes string
 		;TBD translit string not-ascii-char :encode-char
 	]
 
