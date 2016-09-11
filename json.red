@@ -350,9 +350,13 @@ json-ctx: object [
 	;encode-control-chars "^@^A^B^C^D^E^F^G^H^-^/^K^L^M^N^O^P^Q^R^S^T^U^V^W^X^Y^Z^[^\^]^(1E)^_ "
 
 
+	; The reason this func does not copy the string is that a lot of
+	; values will have been FORMed or MOLDed when they are passed to
+	; it, so there's no sense in copying them again. The only time it's
+	; a problem is for string values themselves.
 	;TBD: Encode unicode chars?
-	encode-red-string: func [string][
-		encode-control-chars encode-backslash-escapes copy string
+	encode-red-string: func [string "(modified) Caller should copy"][
+		encode-control-chars encode-backslash-escapes string
 		;TBD translit string not-ascii-char :encode-char
 	]
 
@@ -370,7 +374,7 @@ json-ctx: object [
 		;?? Is it worth the extra lines to make each type a separate case?
 		;	The switch cases will look nicer if we do; more table like.
 		switch/default type?/word :val [
-			string!  [enquote encode-red-string val]
+			string!  [enquote encode-red-string copy val]	; COPY to prevent mutation
 			none!    ["null"]							; JSON value MUST be lowercase
 			logic!   [pick ["true" "false"] val]		; JSON value MUST be lowercase
 			integer! float! [form val] 					; TBD: add decimal!
