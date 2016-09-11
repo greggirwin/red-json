@@ -19,19 +19,34 @@ Red [
 		http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
 	]
 	Notes: {
-		- Ported from %json.r by Romano Paolo Tenca, Douglas Crockford, and Gregg Irwin.
+		- Ported from %json.r, by Romano Paolo Tenca, Douglas Crockford, and Gregg Irwin.
 		- Further research: JSON libs by Chris Ross-Gill, Kaj de Vos, and @WiseGenius.
 		
 		? Do we want to have a single context or separate encode/decode contexts?
 		? Do we want to use a stack with parse, or recursive load-json/decode calls?
 
 		- Unicode support is in the works
-		- Pretty formatting from %json.r removed
+		- Pretty formatting from %json.r removed. Determine what formatting options we want.
 	}
 ]
 
 json-ctx: object [
 
+	;-----------------------------------------------------------
+	;-- Generic support funcs
+
+	; MOLD adds quotes string!, but not all any-string! values.
+	enquote: func [str [string!] "(modified)"][append insert str {"} {"}]
+
+;	map-each: function [
+;		"Evaluates body for each value in a series, returning all results."
+;		'word [word! block!] "Word, or words, to set on each iteration"
+;		data [series!] ; map!
+;		body [block!]
+;	][
+;		collect [foreach :word data [keep/only do body]]
+;	]
+	
 	translit: func [
 		"Tansliterate sub-strings in a string"
 		string [string!] "Input (modified)"
@@ -48,6 +63,9 @@ json-ctx: object [
 		string
 	]
 
+	;-----------------------------------------------------------
+	;-- JSON backslash escaping
+	
 	json-to-red-escape-table: [
 	;   JSON Red
 		{\"} "^""
@@ -94,7 +112,8 @@ json-ctx: object [
 	chars: charset [not {\"} #"^@" - #"^_"]		; Unescaped chars (NOT creates a virtual bitset)
 		
 	; TBD: Unicode
-	not-low-ascii-char: charset [not #"^(00)" - #"^(127)"]
+	;not-low-ascii-char: charset [not #"^(00)" - #"^(127)"]
+	;not-ascii-char: charset [not #"^(00)" - #"^(255)"]
 
 	; everything but \ and "
 	; Defining it literally this way, rather than a [NOT charset] rule, takes ~70K
@@ -105,18 +124,22 @@ json-ctx: object [
 ;		#"^(5D)" - #"^(10FFF)"				; ]^^_`abcdefghijklmnopqrstuvwxyz{|}~  ...U+
 ;	]
 
-	; JSON value rules
+	;-----------------------------------------------------------
+	;-- JSON value rules
+	;-----------------------------------------------------------
 	
-	;# Number
+	;-----------------------------------------------------------
+	;-- Number
 	sign: [#"-"]
 	; Integers can't have leading zeros, but zero by itself is valid.
-	int: [[non-zero-digit any digit] | digit]
+	int:  [[non-zero-digit any digit] | digit]
 	frac: [#"." some digit]
 	exp:  [[#"e" | #"E"] opt [#"+" | #"-"] some digit]
 	number: [opt sign  int  opt frac  opt exp]
 	numeric-literal: :number
 	
-	;# String
+	;-----------------------------------------------------------
+	;-- String
 	string-literal: [
 		#"^"" copy _str [
 			any [some chars | #"\" [#"u" 4 hex-char | json-esc-ch]]
@@ -130,8 +153,29 @@ json-ctx: object [
 			]
 		)
 	]
+
+	decode-unicode-char: func [ch [string!] "4 hex digits"][
+		buf: {#"^^(0000)"}								; Don't COPY buffer, reuse it
+		if not parse ch [4 hex-char] [return none]		; Validate input data
+		attempt [load head change at buf 5 ch]			; Replace 0000 section with arg chars
+	]
+
+	replace-unicode-escapes: func [s [string!] "(modified)" /local c][
+		parse s [
+			any [
+				some chars
+				| json-escaped
+				| change ["\u" copy c 4 hex-char] (decode-unicode-char c)
+			]
+		]
+		s
+	]
+	;str: {\/\\\"\uCAFE\uBABE\uAB98\uFCDE\ubcda\uef4A\b\f\n\r\t`1~!@#$%&*()_+-=[]{}|;:',./<>?}
+	;mod-str: esc-json-to-red json-ctx/replace-unicode-escapes copy str
+	;mod-str: json-ctx/replace-unicode-escapes esc-json-to-red copy str
 	
-	;# Object		
+	;-----------------------------------------------------------
+	;-- Object		
 	json-object: [
 		; Emit a new block to our output target, and push it on our
 		; working stack, to handle nested structures. Emit returns
@@ -159,7 +203,8 @@ json-ctx: object [
 	property: [json-name (emit _str) json-value]
 	json-name: [ws* string-literal ws* #":"]
 	
-	;# List
+	;-----------------------------------------------------------
+	;-- List
 	array-list: [json-value any [sep json-value]]
 	json-array: [
 		; Emit a new block to our output target, and push it on our
@@ -172,7 +217,8 @@ json-ctx: object [
 		#"]" (_res: pop)
 	]
 
-	;# Any JSON Value
+	;-----------------------------------------------------------
+	;-- Any JSON Value (top level JSON parse rule)
 	json-value: [
 		ws*
 		[
@@ -189,24 +235,27 @@ json-ctx: object [
 		ws*
 	]
 
-	;---------------------------------------------------------------------------
-	
+	;-----------------------------------------------------------
+	;-- Decoder data structures
+
+	; The stack is used to handle nested structures (objects and lists)
 	stack: copy []
-	push: func [val][append/only stack val]
-	pop: does [take/last stack]
+	push:  func [val][append/only stack val]
+	pop:   does [take/last stack]
 	
 
-	_out: none	; Our output target/result                          
-	_res: none	; The output position where new values are inserted
+	_out: none	; Our overall output target/result                          
+	_res: none	; The current output position where new values are inserted
 	_str: none	; Where string value parse results go               
 	mark: none	; Current parse position
 	
 	; Add a new value to our output target, and set the position for
 	; the next emit to the tail of the insertion.
+	;!! I really don't like how this updates _res as a side effect. --Gregg
 	emit: func [value][_res: insert/only _res value]
 
-	;---------------------------------------------------------------------------
-
+	;-----------------------------------------------------------
+	;-- Main decoder func
 
 	set 'load-json func [
 		[catch]
@@ -223,30 +272,35 @@ json-ctx: object [
 		]
 	]
 
+
+	;-------------------------------------------------------------------------------
+	;-------------------------------------------------------------------------------
+	;-------------------------------------------------------------------------------
+
+
 	;-----------------------------------------------------------
 	;-- JSON encoder
 	;-----------------------------------------------------------
 
+	; Indentation support, so we can make the JSON output look decent.
 	dent: copy ""
 	dent-size: 4
 	indent:  does [append/dup dent #" " dent-size]
 	outdent: does [remove/part dent dent-size]
 
 	encode-char: func [
-		"Convert a single char to \uxxxx format"
+		"Convert a single char to \uxxxx format (NOT simple JSON backslash escapes)."
 		char [char! string!]
 	][
-		;rejoin ["\u" to-hex/size to integer! char 4]
 		if string? char [char: first char]
+		;rejoin ["\u" to-hex/size to integer! char 4]
 		append copy "\u" to-hex/size to integer! char 4
 	]
 
+;-------------------------------------------------------------------------------
 ;!! This is an optimization. The main reason it's here is that Red doesn't
-;!! have a GC yet. While control chars may not be used much, they must never
-;!! be allowed to create bad JSON data. RFC7159 says "Any character may be
-;!! escaped.", so we need to support that. But, mainly, generating the lookup
-;!! table once, and using that, prevents repeated block allocations in a func
-;!! call used every time we encode a char.
+;!! have a GC yet. Generating the lookup table once, and using that, prevents 
+;!! repeated block allocations every time we encode a control character.
 	make-ctrl-char-esc-table: function [][
 		collect [
 			;!! FORM is used here, when building the table, because TRANSLIT
@@ -258,32 +312,30 @@ json-ctx: object [
 		]
 	]
 	ctrl-char-esc-table: make-ctrl-char-esc-table
+;-------------------------------------------------------------------------------
 
 	encode-control-chars: func [
 		"Convert all control chars in string to \uxxxx format"
 		string [any-string!] "(modified)"
 	][
 		if find string ctrl-char [
-			;translit string ctrl-char :encode-char
-			translit string ctrl-char ctrl-char-esc-table
+			;translit string ctrl-char :encode-char			; Use function to encode
+			translit string ctrl-char ctrl-char-esc-table	; Optimized table lookup approach
 		]
 		string
 	]
 	;encode-control-chars "^@^A^B^C^D^E^F^G^H^-^/^K^L^M^N^O^P^Q^R^S^T^U^V^W^X^Y^Z^[^\^]^(1E)^_ "
-;!!
 
-	;TBD: Encode unicode chars
+
+	;TBD: Encode unicode chars?
 	encode-red-string: func [string "(modified)"][
 		encode-control-chars esc-red-to-json string
-		;TBD translit string not-low-ascii-char :encode-char
+		;TBD translit string not-ascii-char :encode-char
 	]
 
 	red-to-json-name: func [val][
-		append add-quotes encode-red-string form val ":"
+		append enquote encode-red-string form val ":"
 	]
-
-	; MOLD adds quotes to string!, but not all any-string! values.
-	add-quotes: func [str [string!] "(modified)"][append insert str {"} {"}]
 
 	; Types that map directly to a known JSON type.
 	json-type!: union any-block! union any-string! make typeset! [
@@ -292,8 +344,10 @@ json-ctx: object [
 	
 	
 	red-to-json-value: func [val][
+		;?? Is it worth the extra lines to make each type a separate case?
+		;	The switch cases will look nicer if we do; more table like.
 		switch/default type?/word :val [
-			string!  [add-quotes encode-red-string val]
+			string!  [enquote encode-red-string val]
 			none!    ["null"]							; JSON value MUST be lowercase
 			logic!   [pick ["true" "false"] val]		; JSON value MUST be lowercase
 			integer! float! [form val] 					; TBD: add decimal!
@@ -307,17 +361,20 @@ json-ctx: object [
 					red-to-json-value get val
 				][
 					; No-value error, or non-JSON types become quoted strings.
-					add-quotes encode-red-string form val
+					enquote encode-red-string form val
 				]
 			]
 		][
 			either any-block? :val [block-to-json-list val] [
 				; FORM forces binary! values to strings, so newlines escape properly.
-				add-quotes encode-red-string either any-string? :val [form val] [mold :val]
+				enquote encode-red-string either any-string? :val [form val] [mold :val]
 			]
 		]
 	]
 
+	;TBD: Eventually we should have a nice dlm string tool in Red. Is it worth
+	;	  including our own for the list/object cases? 
+	
 	block-to-json-list: func [block [any-block!] /local result sep][
 		indent
 		result: copy "[^/"
@@ -345,6 +402,9 @@ json-ctx: object [
 		result
 	]
 
+	;-----------------------------------------------------------
+	;-- Main encoder func
+
 	set 'to-json function [
 		[catch]
 		"Convert red data to a json string"
@@ -357,26 +417,9 @@ json-ctx: object [
 		result
 	]
 
-	decode-unicode-char: func [ch [string!] "4 hex digits"][
-		buf: {#"^^(0000)"}								; Don't COPY buffer, reuse it
-		if not parse ch [4 hex-char] [return none]		; Validate input data
-		attempt [load head change at buf 5 ch]
-	]
+; Even if we don't do full pretty formatting of JSON, it might still be nice
+; to do the single-line bit.
 
-	replace-unicode-escapes: func [s [string!] "(modified)" /local c][
-		parse s [
-			any [
-				some chars
-				| json-escaped
-				| change ["\u" copy c 4 hex-char] (decode-unicode-char c)
-			]
-		]
-		s
-	]
-	;str: {\/\\\"\uCAFE\uBABE\uAB98\uFCDE\ubcda\uef4A\b\f\n\r\t`1~!@#$%&*()_+-=[]{}|;:',./<>?}
-	;mod-str: esc-json-to-red json-ctx/replace-unicode-escapes copy str
-	;mod-str: json-ctx/replace-unicode-escapes esc-json-to-red copy str
-	
 ;	    single-line-cleanup: function [string][
 ;	    	table: ["{ " "{"  "[ " "["  " }" "}"  " ]" "]"]		; From/To Old/New Dirty/Clean values
 ;	    	dirty:  ["{ " | "[ " | " }" | " ]"]
