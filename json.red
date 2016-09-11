@@ -25,8 +25,23 @@ Red [
 		? Do we want to have a single context or separate encode/decode contexts?
 		? Do we want to use a stack with parse, or recursive load-json/decode calls?
 
-		- Unicode support is in the works
+		- Unicode support is in the works.
 		- Pretty formatting from %json.r removed. Determine what formatting options we want.
+
+		- Would like to add more detailed decode error info.
+			- JSON document is empty.
+			- Invalid value.
+			- Missing name for object member.
+			- Missing colon after name of object member.
+			- Missing comma or right curly brace after object member.
+			- Missing comma or ] after array element.
+			- Invalid \uXXXX escape.
+			- Invalid surrogate pair.
+			- Invalid backslash escape.
+			- Missing closing quotation mark in string.
+			- Numeric overflow.
+			- Missing fraction in number.
+			- Missing exponent in number.
 	}
 ]
 
@@ -174,6 +189,7 @@ json-ctx: object [
 				some chars								; Pass over unescaped chars
 				| json-escaped							; Pass over simple backslash escapes
 				| change ["\u" copy c 4 hex-char] (decode-unicode-char c)
+				;| "\u" followed by anything else is an invalid \uXXXX escape
 			]
 		]
 		s
@@ -335,8 +351,8 @@ json-ctx: object [
 
 
 	;TBD: Encode unicode chars?
-	encode-red-string: func [string "(modified)"][
-		encode-control-chars encode-backslash-escapes string
+	encode-red-string: func [string][
+		encode-control-chars encode-backslash-escapes copy string
 		;TBD translit string not-ascii-char :encode-char
 	]
 
