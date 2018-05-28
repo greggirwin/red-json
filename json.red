@@ -323,7 +323,7 @@ json-ctx: object [
 		_out: _res: copy []		; These point to the same position to start with
 		mark: input
 		either parse input json-value [pick _out 1][
-			throw make error! form reduce [
+			make error! form reduce [
 				"Invalid json string. Near:"
 				either tail? mark ["<end of input>"] [mold copy/part mark 40]
 			]
