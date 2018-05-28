@@ -1,4 +1,13 @@
+Old things are included here for reference. The wallet code has a minimal JSON
+parser, which is the most modern version. The most value here may come from
+the test files.
 
+Red should get a basic GC before too long, so I don't think it's worth the
+effort to avoid allocations on those grounds.
+
+Once the core works, the big difference from Rebol is that we have `load/as`
+and `save/as` that work with `system/codecs` (see %red/environment/codecs/)
+rather than just creating `to-json/load-json` global funcs.
 
 # Testing
 
