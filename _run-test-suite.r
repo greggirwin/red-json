@@ -1,6 +1,6 @@
-Red []
+rebol []
 
-do %json.red
+do %json.r
 
 pass?: func [file] [not error? set/any 'err try [load-json read file]]
 fail?: func [file] [error? set/any 'err try [load-json read file]]
@@ -13,7 +13,7 @@ remove-each file files [not find/match file %pass]
 foreach file files [
 	if not pass? file [
 		print [tab mold file "didn't pass"]
-		print mold err
+		print mold disarm err
 		;halt
 	]
 ]
@@ -24,7 +24,7 @@ files: read %.
 remove-each file files [not find/match file %fail]
 foreach file files [
 	if not fail? file [
-		print [tab mold file "didn't fail as expected"]
+	    print [tab mold file "didn't fail as expected"]
 	]
 ]
 print "Fail tests complete"

@@ -1,12 +1,19 @@
 Red [
 	File:    %json.red
 	Title:   "Red-JSON codec"
-	Purpose: "Convert JSON to Red, and vice versa."
-	Author:  "Gregg Irwin"
-	;Date: 	 09-Sep-2016
+	Purpose: "Convert json to Red, and vice versa."
+	Author:  [
+		"Gregg Irwin" {
+			Ported from %json.r by Romano Paolo Tenca, Douglas Crockford, 
+			and Gregg Irwin.
+			Further research: json libs by Chris Ross-Gill, Kaj de Vos, and
+			@WiseGenius.
+		}
+	]
+	;Date: 	 10-Jul-2016
 	Version: 0.0.1
 	History: {
-		0.0.1 09-Sep-2016 "First release." Gregg
+		0.0.1 10-Sep-2016 "First release. Based on %json.r" Gregg
 	}
 	license: [
 		http://www.apache.org/licenses/LICENSE-2.0 
@@ -17,8 +24,11 @@ Red [
 		https://www.ietf.org/rfc/rfc4627.txt
 		http://www.rfc-editor.org/rfc/rfc7159.txt
 		http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
+		https://github.com/rebolek/red-tools/blob/master/json.red
 	]
 	Notes: {
+		NOT FULLY FUNCTIONAL YET!!
+		
 		- Ported from %json.r, by Romano Paolo Tenca, Douglas Crockford, and Gregg Irwin.
 		- Further research: JSON libs by Chris Ross-Gill, Kaj de Vos, and @WiseGenius.
 		
