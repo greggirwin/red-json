@@ -60,33 +60,33 @@ json-ctx: object [
 	;-----------------------------------------------------------
 	;-- Generic support funcs
 
-	BOM: [
-		UTF-8		#{EFBBBF}
-		UTF-16-BE	#{FEFF}
-		UTF-16-LE	#{FFFE}
-		UTF-32-BE	#{0000FEFF}
-		UTF-32-LE	#{FFFE0000}
-	]
-
-	BOM-UTF-16?: func [data [string! binary!]][
-		any [find/match data BOM/UTF-16-BE  find/match data BOM/UTF-16-LE]
-	]
-
-	BOM-UTF-32?: func [data [string! binary!]][
-		any [find/match data BOM/UTF-32-BE  find/match data BOM/UTF-32-LE]
-	]
+;	BOM: [
+;		UTF-8		#{EFBBBF}
+;		UTF-16-BE	#{FEFF}
+;		UTF-16-LE	#{FFFE}
+;		UTF-32-BE	#{0000FEFF}
+;		UTF-32-LE	#{FFFE0000}
+;	]
+;
+;	BOM-UTF-16?: func [data [string! binary!]][
+;		any [find/match data BOM/UTF-16-BE  find/match data BOM/UTF-16-LE]
+;	]
+;
+;	BOM-UTF-32?: func [data [string! binary!]][
+;		any [find/match data BOM/UTF-32-BE  find/match data BOM/UTF-32-LE]
+;	]
 
 
 	; MOLD adds quotes string!, but not all any-string! values.
 	enquote: func [str [string!] "(modified)"][append insert str {"} {"}]
 
-	high-surrogate?: func [codepoint [integer!]][
-        all [codepoint >= D800h  codepoint <= DBFFh]
-    ]
-    
-	low-surrogate?: func [codepoint [integer!]][
-        all [codepoint >= DC00h  codepoint <= DFFFh]
-    ]
+;	high-surrogate?: func [codepoint [integer!]][
+;        all [codepoint >= D800h  codepoint <= DBFFh]
+;    ]
+;    
+;	low-surrogate?: func [codepoint [integer!]][
+;        all [codepoint >= DC00h  codepoint <= DFFFh]
+;    ]
     
 ;	map-each: function [
 ;		"Evaluates body for each value in a series, returning all results."
